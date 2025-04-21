@@ -7,7 +7,7 @@ from basicsr.utils.download_util import load_file_from_url
 
 from realesrgan import RealESRGANer
 from realesrgan.archs.srvgg_arch import SRVGGNetCompact
-
+import torch
 
 def main():
     """Inference demo for Real-ESRGAN.
@@ -103,7 +103,16 @@ def main():
         model_path = [model_path, wdn_model_path]
         dni_weight = [args.denoise_strength, 1 - args.denoise_strength]
 
-    # restorer
+    # Add MPS support
+    print("Checking available device...")
+    if torch.backends.mps.is_available():
+        print("MPS available - using M1/M2 GPU")
+        device = torch.device("mps")
+    else:
+        print("MPS not available - using CPU")
+        device = torch.device("cpu")
+
+    # Update RealESRGANer initialization
     upsampler = RealESRGANer(
         scale=netscale,
         model_path=model_path,
@@ -113,7 +122,7 @@ def main():
         tile_pad=args.tile_pad,
         pre_pad=args.pre_pad,
         half=not args.fp32,
-        gpu_id=args.gpu_id)
+        device=device)
 
     if args.face_enhance:  # Use GFPGAN for face enhancement
         from gfpgan import GFPGANer
